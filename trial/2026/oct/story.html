@@ -1,51 +1,92 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>My First App</title>
 </head>
 <body>
+  <main>
+    <h1>Write something</h1>
 
-<h2>Write Somethindsfag</h2>
+    <form id="itemForm">
+      <label for="inputText">New item</label>
+      <input id="inputText" name="item" type="text" placeholder="Type here" required>
+      <p id="preview" aria-live="polite"></p>
+      <button type="submit">Save</button>
+    </form>
 
-<input id="inputText" placeholder="Type here">
-<p id="preview" aria-live="polite"></p>
-<button onclick="saveData()">Save</button>
+    <p id="status" role="status" aria-live="polite"></p>
+    <ul id="list"></ul>
+  </main>
 
-<ul id="list"></ul>
+  <script>
+    const STORAGE_KEY = "items";
+    const form = document.getElementById("itemForm");
+    const input = document.getElementById("inputText");
+    const preview = document.getElementById("preview");
+    const status = document.getElementById("status");
+    const list = document.getElementById("list");
 
-<script>
-function loadData() {
-  let items = JSON.parse(localStorage.getItem("items")) || [];
-  let list = document.getElementById("list");
-  list.innerHTML = "";
+    function readItems() {
+      const storedItems = localStorage.getItem(STORAGE_KEY);
+      if (storedItems === null) {
+        return [];
+      }
 
-  items.forEach(item => {
-    let li = document.createElement("li");
-    li.textContent = item;
-    list.appendChild(li);
-  });
-}
+      const items = JSON.parse(storedItems);
+      if (!Array.isArray(items) || !items.every(item => typeof item === "string")) {
+        throw new Error("Saved items have an invalid format.");
+      }
 
-function saveData() {
-  let input = document.getElementById("inputText");
-  let items = JSON.parse(localStorage.getItem("items")) || [];
+      return items;
+    }
 
-  items.push(input.value);
-  localStorage.setItem("items", JSON.stringify(items));
+    function renderItems(items) {
+      list.replaceChildren();
 
-  input.value = "";
-  document.getElementById("preview").textContent = "";
-  loadData();
-}
+      items.forEach(item => {
+        const listItem = document.createElement("li");
+        listItem.textContent = item;
+        list.appendChild(listItem);
+      });
+    }
 
-document.getElementById("inputText").addEventListener("input", event => {
-  document.getElementById("preview").textContent = event.target.value;
-});
+    form.addEventListener("submit", event => {
+      event.preventDefault();
 
-loadData();
+      const item = input.value.trim();
+      if (!item) {
+        input.focus();
+        return;
+      }
 
-</script>
+      try {
+        const items = readItems();
+        items.push(item);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+        renderItems(items);
+        input.value = "";
+        preview.textContent = "";
+        status.textContent = "Item saved.";
+      } catch (error) {
+        console.error("Unable to save the item.", error);
+        status.textContent = "Unable to save the item. Check that browser storage is available.";
+      }
+    });
+
+    input.addEventListener("input", () => {
+      preview.textContent = input.value;
+      status.textContent = "";
+    });
+
+    try {
+      renderItems(readItems());
+    } catch (error) {
+      console.error("Unable to load saved items.", error);
+      status.textContent = "Unable to load saved items. The stored data may be invalid.";
+    }
+  </script>
 
 </body>
 </html>
-
